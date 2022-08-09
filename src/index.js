@@ -8,7 +8,6 @@ import { logger } from './utils/logger.js';
 import cors from 'cors';
 import mysql from 'mysql';
 import dotenv from 'dotenv';
-import { apiBaseUrl } from './config.js';
 
 dotenv.config()
 const isHttps = process.env.isHttps * 1 === 1;
@@ -16,6 +15,8 @@ const httpsPort = process.env.httpsPort;
 const httpPort = process.env.httpPort;
 
 const tableName = process.env.TABLE_NAME;
+const nftTableName = process.env.NFT_TABLE_NAME;
+const apiBaseUrl = process.env.API_BASE_PATH;
 
 let credentials = null;
 if(isHttps) {
@@ -229,7 +230,6 @@ app.post(apiBaseUrl + '/getDirectReferee', function (req, res) {
 	const address = req.body.address;
 	const team = req.body.team === undefined ? 0 : parseInt(req.body.team);
 	let sql = `select * from ${tableName} where referer = '${address}' and team = ${team}`;
-	console.log(sql);
 	try {
 		connection.query(sql, function (error, data) {
       if(error) res.send({success: false, message: error.message});
@@ -257,6 +257,43 @@ app.post(apiBaseUrl + '/getDirectReferee', function (req, res) {
       }
 		})
 	} catch (error) {
+		console.log(error);
+	}
+})
+
+/**
+ * Get NFTs by owner
+ */
+app.post(apiBaseUrl + '/getNFTsForOwner', function (req, res) {
+	if(req.body.address === undefined) {
+		res.send({success: false, message: "Unavailable address"});
+		return;
+	}
+	const chainId = req.body.chainId;
+	const address = req.body.address;
+	const nftAddress = req.body.nftAddress;
+	let sql = `select * from ${nftTableName} where chainId = ${chainId} and lower(owner) = '${address.toLowerCase()}' and lower(nftAddress) = '${nftAddress.toLowerCase()}'`;
+	try {
+		connection.query(sql, function (error, data) {
+			if(error) res.send({ success: false, message: 'no data' })
+			else {
+				let list = [];
+				for (let i = 0; i < data.length; i++) {
+					list.push({
+						chainId: data[i].chainId,
+						nftAddress: data[i].nftAddress,
+						tokenId: data[i].tokenId
+					})
+				}
+				res.send({
+					success: true,
+					data: {
+						list,
+					}
+				})
+			}
+		})
+	} catch(error) {
 		console.log(error);
 	}
 })
@@ -290,6 +327,16 @@ function getUTCStartTimestampOf(timestamp) {
 	startOfDay.setUTCHours(0, 0, 0, 0);
 	return parseInt((new Date(startOfDay).getTime()) / 1000);
 }
+
+app.use('/images', express.static('images'));
+
+app.get(apiBaseUrl + '/metadata/:tokenId', function (req, res) {
+	res.send({
+		name: "SNFT",
+		description: "SNFT for NUSIC mysterybox",
+		image: process.env.BASE_URL + "/images/" + (req.params.tokenId % 5 + 1) + ".jpg",
+	})
+});
 
 if(isHttps) {
   const httpsServer = https.createServer(credentials, app);

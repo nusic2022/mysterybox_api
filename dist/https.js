@@ -3,16 +3,16 @@ import http from 'http';
 import https from 'https';
 import express from 'express';
 
-var privateKey  = fs.readFileSync('sslcert/server.key', 'utf8');
+var privateKey = fs.readFileSync('sslcert/server.key', 'utf8');
 var certificate = fs.readFileSync('sslcert/server.pem', 'utf8');
 
-var credentials = {key: privateKey, cert: certificate};
+var credentials = { key: privateKey, cert: certificate };
 const app = express();
 
 // your express configuration here
 app.get(process.env.API_BASE_PATH + '/test', function (req, res) {
 	res.send('Hello World!');
-})
+});
 
 const httpServer = http.createServer(app);
 const httpsServer = https.createServer(credentials, app);
