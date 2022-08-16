@@ -46,7 +46,9 @@ function setCors(app) {
     'http://127.0.0.1:3000', 
     'http://localhost:3000', 
 		'https://nusic.vip',
+		"https://box.nusic.vip",
     'https://www.nusic.vip',
+		'https://mysterybox-web.vercel.app'
   ];
   const origin = function (origin, callback) {
     if(origin === undefined) callback(null, true); // for postman testing ######
