@@ -188,7 +188,6 @@ app.post(apiBaseUrl + '/getAllReferee', async function (req, res) {
 
 	for(let i = 0; i < levels; i++) {
 		const addressList = getAddressList(allList);
-		console.log(addressList);
 		let sql = `select * from ${tableName} 
 							 where referer in (${addressList}) and team=${team}`;
 		const refs = await getReferee(sql);
