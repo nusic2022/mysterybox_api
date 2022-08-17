@@ -80,7 +80,12 @@ app.post(apiBaseUrl + '/getTopReferers', function (req, res) {
 	const startTimestamp = getUTCStartTimestamp();
 	const endTimestamp = parseInt(((new Date()).getTime()) / 1000)
 	const team = req.body.team === undefined ? 0 : parseInt(req.body.team);
-	const sql = `select referer, count(*) as nums from ${tableName} where createAt >= ${startTimestamp} and createAt <= ${endTimestamp} and team = ${team} group by referer order by nums desc limit ${limit}`;
+	// const sql = `select referer, count(*) as nums from ${tableName} 
+	// 						 where createAt >= ${startTimestamp} and createAt <= ${endTimestamp} 
+	// 						 and team = ${team} group by referer order by nums desc limit ${limit}`;
+	const sql = `select referer, sum(amount * rate / 10000 / 100000000000000000000) as sums from ${tableName} 
+							 where createAt >= ${startTimestamp} and createAt <= ${endTimestamp} 
+							 and team = ${team} group by referer order by sums desc limit ${limit}`;
 
 	try {
     connection.query(sql, function(error, data, fields) {
@@ -124,7 +129,9 @@ app.post(apiBaseUrl + '/getTopReferersByDate', function(req, res) {
 	const team = req.body.team === undefined ? 0 : parseInt(req.body.team);
 	// console.log(startTimestamp, endTimestamp);
 
-	const sql = `select referer, count(*) as nums from ${tableName} where createAt >= ${startTimestamp} and createAt <= ${endTimestamp} and team = ${team} group by referer order by nums desc limit ${limit}`;
+	const sql = `select referer, count(amount * rate / 10000 / 100000000000000000000) as sums from ${tableName} 
+							 where createAt >= ${startTimestamp} and createAt <= ${endTimestamp} 
+							 and team = ${team} group by referer order by sums desc limit ${limit}`;
 
 	try {
     connection.query(sql, function(error, data, fields) {
@@ -171,20 +178,25 @@ app.post(apiBaseUrl + '/getAllReferee', async function (req, res) {
 
 	let allList = [];
 	let newList = [];
-	allList.push(`\'${address}\'`);
-	newList.push(`\'${address}\'`);
+	allList.push({address: `\'${address}\'`, amount: 0, rate: 0, number: 0});
+	newList.push({address: `\'${address}\'`, amount: 0, rate: 0, number: 0});
 
 	let fundedNewList = [];
 	let fundedAllList = [];
-	fundedAllList.push(`\'${address}\'`);
-	fundedNewList.push(`\'${address}\'`);
+	fundedAllList.push({address: `\'${address}\'`, amount: 0, rate: 0, number: 0});
+	fundedNewList.push({address: `\'${address}\'`, amount: 0, rate: 0, number: 0});
 
 	for(let i = 0; i < levels; i++) {
-		let sql = `select * from ${tableName} where referer in (${allList.join(',')}) and team=${team}`;
+		const addressList = getAddressList(allList);
+		console.log(addressList);
+		let sql = `select * from ${tableName} 
+							 where referer in (${addressList}) and team=${team}`;
 		const refs = await getReferee(sql);
 		newList = refs.referers;
 		fundedNewList = refs.funded;
+		
 		if(newList === undefined || newList.length === 0) break;
+		
 		newList = removeItemsFromArray(newList, allList);
 		allList.push(...newList);
 		fundedNewList = removeItemsFromArray(fundedNewList, fundedAllList);
@@ -199,6 +211,12 @@ app.post(apiBaseUrl + '/getAllReferee', async function (req, res) {
 	}});
 })
 
+const getAddressList = (arr) => {
+	let addresses = [];
+	for(let i = 0; i < arr.length; i++) addresses.push(arr[i].address);
+	return addresses.join(', ');
+}
+
 const getReferee = (sql) => {
 	return new Promise((resolve, reject) => {
 		try {
@@ -208,9 +226,22 @@ const getReferee = (sql) => {
 				else {
 					let referers = [];
 					let funded = [];
+					
 					for(let i = 0; i < result.length; i++) {
-						referers.push(`\'${result[i].referee}\'`);
-						if(parseInt(result[i].funded) === 1) funded.push(`\'${result[i].referee}\'`);
+						referers.push({
+							address: `\'${result[i].referee}\'`,
+							amount: result[i].amount,
+							rate: result[i].rate,
+							number: result[i].amount * result[i].rate / 1e24,
+						});
+						if(parseInt(result[i].funded) === 1) {
+							funded.push({
+								address: `\'${result[i].referee}\'`,
+								amount: result[i].amount,
+								rate: result[i].rate,
+								number: result[i].amount * result[i].rate / 1e24,
+							});
+						}
 					}
 					resolve({referers, funded});
 				}
@@ -246,6 +277,7 @@ app.post(apiBaseUrl + '/getDirectReferee', function (req, res) {
 							funded: data[i].funded,
 							rate: data[i].rate,
 							amount: data[i].amount,
+							number: data[i].amount * data[i].rate / 1e24,
 							team: data[i].team,
             }) 
           }
@@ -302,7 +334,7 @@ app.post(apiBaseUrl + '/getNFTsForOwner', function (req, res) {
 
 const removeItemFromArray = (array, item) => {
 	for(let i = 0; i < array.length; i++) {
-		if(array[i] === item) {
+		if(array[i].address === item.address) {
 			array.splice(i, 1);
 			break;
 		}
