@@ -97,7 +97,7 @@ app.post(apiBaseUrl + '/getTopReferers', function (req, res) {
           for(let i = 0; i < data.length; i++) {
             list.push({
 							referer: data[i].referer,
-							count: data[i].nums,
+							count: data[i].sums,
             }) 
           }
           res.send({
@@ -143,7 +143,7 @@ app.post(apiBaseUrl + '/getTopReferersByDate', function(req, res) {
           for(let i = 0; i < data.length; i++) {
             list.push({
 							referer: data[i].referer,
-							count: data[i].nums,
+							count: data[i].sums,
             }) 
           }
           res.send({
