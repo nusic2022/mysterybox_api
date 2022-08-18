@@ -84,7 +84,7 @@ app.post(apiBaseUrl + '/getTopReferers', function (req, res) {
 	// 						 where createAt >= ${startTimestamp} and createAt <= ${endTimestamp} 
 	// 						 and team = ${team} group by referer order by nums desc limit ${limit}`;
 	const sql = `select referer, sum(amount * rate / 10000 / 100000000000000000000) as sums from ${tableName} 
-							 where createAt >= ${startTimestamp} and createAt <= ${endTimestamp} 
+							 where createAt >= ${startTimestamp} and createAt <= ${endTimestamp} and funded = 1
 							 and team = ${team} group by referer order by sums desc limit ${limit}`;
 	console.log(sql);
 
@@ -131,7 +131,7 @@ app.post(apiBaseUrl + '/getTopReferersByDate', function(req, res) {
 	// console.log(startTimestamp, endTimestamp);
 
 	const sql = `select referer, count(amount * rate / 10000 / 100000000000000000000) as sums from ${tableName} 
-							 where createAt >= ${startTimestamp} and createAt <= ${endTimestamp} 
+							 where createAt >= ${startTimestamp} and createAt <= ${endTimestamp} and funded = 1
 							 and team = ${team} group by referer order by sums desc limit ${limit}`;
 	try {
     connection.query(sql, function(error, data, fields) {
