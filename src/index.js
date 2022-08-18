@@ -117,6 +117,39 @@ app.post(apiBaseUrl + '/getTopReferers', function (req, res) {
   }
 })
 
+app.post(apiBaseUrl + '/getAllTopReferers', function (req, res) {
+	const limit = req.body.limit !== undefined ? parseInt(req.body.limit) : 10;
+	const team = req.body.team === undefined ? 0 : parseInt(req.body.team);
+	const sql = `select referer, sum(amount * rate / 10000 / 100000000000000000000) as sums from ${tableName} 
+							 where funded = 1 and team = ${team} group by referer order by sums desc limit ${limit}`;
+
+	try {
+    connection.query(sql, function(error, data, fields) {
+      if(error) res.send({success: false, message: error.message});
+      else {
+        if(data.length == 0) res.send({success: false, message: 'no data'})
+        else {
+          let list = [];
+          for(let i = 0; i < data.length; i++) {
+            list.push({
+							referer: data[i].referer,
+							count: data[i].sums,
+            }) 
+          }
+          res.send({
+            success: true,
+            data: {
+							list,
+						}
+          })
+        }
+      }
+    })  
+  } catch (err) {
+    res.send({success: false, message: err.message});
+  }
+})
+
 /**
  * Get top 10 referers by date
  * @param limit top n list, default is 10
